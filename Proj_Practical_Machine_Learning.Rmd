@@ -31,7 +31,7 @@ glimpse(train)
 ```
 
 **Clean Data**  
-Remove columns with NA values, those that are insignificant, have zero variance and are highly correlated with one another.
+Remove columns with NA values, those that are insignificant and have zero variance.
 ```{r,echo=TRUE,message=FALSE,warning=FALSE,comment=""}
 library(caret)
 train<-train[,colSums(is.na(train)) ==0]
