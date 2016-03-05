@@ -1,0 +1,79 @@
+
+**PREDICTING QUALITY OF DUMBBELL BICEPS CURL**  
+by Lorelie Calima-Prall  
+March 4, 2016  
+
+**Executive Summary**  
+Based on weight lifting exercises data from http://groupware.les.inf.puc-rio.br/har, the goal of this project is to predict the manner in which the dumbbell bicep curl was performed. This is the "classe" variable in the training set. This report describes how the model was built, how cross validation was implemented, what the expected out of sample error is and why certain choices were made. The resulting model is also used to predict 20 different test cases.  
+
+The training data for this project is downloaded from:  
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv  
+
+The test data is available from:  
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv  
+
+**Import and Explore Data**  
+The training data consists of 19622 observations on 127 variables, where classe is the dependent variable and the rest are explanatory variables:
+```{r,echo=TRUE,message=FALSE,warning=FALSE,comment=""}
+trainurl<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+traindest<-"C:/Users/Lorelie/Documents/Classes/Coursera/Data Science/08_Practical_Machine_Learning/04_Week/Project/traindata.csv"
+download.file(trainurl,traindest)
+
+testurl<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+testdest<-"C:/Users/Lorelie/Documents/Classes/Coursera/Data Science/08_Practical_Machine_Learning/04_Week/Project/testdata.csv"
+download.file(testurl,testdest)
+
+train <- read.csv(traindest,na.strings=c("#DIV/0!"))
+test <- read.csv(testdest,na.strings=c("#DIV/0!"))
+
+require(dplyr)
+glimpse(train)
+```
+
+**Clean Data**  
+Remove columns with NA values, those that are insignificant, have zero variance and are highly correlated with one another.
+```{r,echo=TRUE,message=FALSE,warning=FALSE,comment=""}
+library(caret)
+train<-train[,colSums(is.na(train)) ==0]
+colnames(train)[colSums(is.na(train)) > 0]
+
+dropcols<-names(train) %in% c('X', 'user_name', 'raw_timestamp_part_1', 'raw_timestamp_part_2', 'cvtd_timestamp', 'new_window', 'num_window')
+train <- train[!dropcols]
+
+nzv <- nearZeroVar(train)
+train <- train[, -nzv]
+```
+
+**Split Data for Cross-Validation**  
+```{r,echo=TRUE,message=FALSE,warning=FALSE,comment=""}
+library(caret)
+trainIndex <- createDataPartition(train$classe, p =0.8,list = FALSE,times=1)
+train <-train[trainIndex,]
+valid <-train[-trainIndex,]
+```
+
+**Random Forests Model**  
+```{r,echo=TRUE,message=FALSE,warning=FALSE,comment=""}
+library(randomForest)
+trainrf<-randomForest(classe~.,data=train,importance=TRUE)
+trainrf
+varImpPlot(trainrf)
+```
+
+**Cross Validation Testing and Out-of-Sample Error Estimate**  
+```{r,echo=TRUE,message=FALSE,warning=FALSE,comment=""}
+predvalid<-predict(trainrf,valid)
+confusionMatrix(valid$classe, predvalid)
+accuracy <- postResample(valid$classe, predvalid)
+accuracy <-accuracy[[1]]
+accuracy
+oose<-1-accuracy
+oose
+```
+The estimated accuracy of the model is 100% and the estimated out-of-sample error based on our fitted model applied to the cross validation dataset is 0%.  
+
+**Predicting with Random Forests**  
+```{r,echo=TRUE,message=FALSE,warning=FALSE,comment=""}
+pred<-predict(trainrf,test)
+pred
+```
